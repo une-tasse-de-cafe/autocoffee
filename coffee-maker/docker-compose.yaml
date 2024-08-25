@@ -1,0 +1,11 @@
+
+version: '3.8'
+services:
+  coffee-makers:
+    image: ghcr.io/une-tasse-de-cafe/coffee-shop/coffeemakers:latest
+    build: .
+    environment:
+      - "NATS_URL=192.168.128.51:4222"
+    deploy:
+      mode: replicated
+      replicas: 5
