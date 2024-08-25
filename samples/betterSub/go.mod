@@ -1,4 +1,4 @@
-module github.com/une-tasse-de-cafe/coffee-shop/samples/simpleSub
+module github.com/une-tasse-de-cafe/coffee-shop/samples/betterSub
 
 go 1.21.6
 

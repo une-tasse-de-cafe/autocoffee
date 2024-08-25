@@ -8,36 +8,33 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+const (
+	topic = "coffee.*"
+)
+
 func main() {
 
 	url := os.Getenv("NATS_URL")
 	if url == "" {
-		url = "192.168.128.51:4222"
+		url = "192.168.128.51:4222,192.168.128.52:4222"
 	}
 
 	nc, _ := nats.Connect(url)
-
 	defer nc.Drain()
 
-	nc.Publish("greet.joe", []byte("hello"))
+	fmt.Printf("Listening to topic %s \n", topic)
+	sub, _ := nc.SubscribeSync(topic)
 
-	sub, _ := nc.SubscribeSync("greet.*")
-
-	msg, _ := sub.NextMsg(2000 * time.Millisecond)
-	fmt.Println("subscribed after a publish...")
-	fmt.Printf("msg is nil? %v\n", msg == nil)
-
-	nc.Publish("greet.joe", []byte("hello"))
-	nc.Publish("greet.pam", []byte("hello"))
-
-	msg, _ = sub.NextMsg(2000 * time.Millisecond)
+	msg, _ := sub.NextMsg(10 * time.Minute)
+	if msg == nil {
+		fmt.Println("no message received")
+		os.Exit(1)
+	}
 	fmt.Printf("msg data: %q on subject %q\n", string(msg.Data), msg.Subject)
 
-	msg, _ = sub.NextMsg(2000 * time.Millisecond)
+	time.Sleep(10 * time.Second)
+	msg, _ = sub.NextMsg(10 * time.Minute)
+
 	fmt.Printf("msg data: %q on subject %q\n", string(msg.Data), msg.Subject)
 
-	nc.Publish("greet.bob", []byte("hello"))
-
-	msg, _ = sub.NextMsg(2000 * time.Millisecond)
-	fmt.Printf("msg data: %q on subject %q\n", string(msg.Data), msg.Subject)
 }

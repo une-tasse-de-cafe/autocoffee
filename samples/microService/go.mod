@@ -1,6 +1,6 @@
-module github.com/une-tasse-de-cafe/coffee-shop/samples/simpleSub
+module github.com/une-tasse-de-cafe/coffee-shop/samples/microService
 
-go 1.21.6
+go 1.22.5
 
 require github.com/nats-io/nats.go v1.37.0
 
