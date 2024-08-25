@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - Dockerfile: coffee-shop/coffee-maker/Dockerfile
-            context: coffee-shop/coffee-maker
+          - Dockerfile: coffee-maker/Dockerfile
+            context: coffee-maker
             tag: coffee-maker
 
     steps:
