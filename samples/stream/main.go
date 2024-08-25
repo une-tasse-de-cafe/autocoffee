@@ -11,6 +11,10 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
+const (
+	consumerName = "coffee-maker"
+)
+
 func main() {
 	nc, _ := nats.Connect(os.Getenv("NATS_URL"))
 	defer nc.Close()
@@ -22,20 +26,41 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cfg := jetstream.ConsumerConfig{Name: "krups-01"}
-	cons, _ := js.CreateConsumer(ctx, "orders", cfg)
+	cfgStream := jetstream.StreamConfig{
+		Replicas:    3,
+		Name:        "coffeeorders",
+		Subjects:    []string{"coffee.orders"},
+		Storage:     jetstream.FileStorage,
+		Retention:   jetstream.InterestPolicy,
+		AllowDirect: true,
+	}
 
-	fmt.Println("# Consume messages using Consume()")
+	_, err = js.CreateOrUpdateStream(ctx, cfgStream)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cfgConsu := jetstream.ConsumerConfig{
+		Name:          consumerName,
+		FilterSubject: "coffee.orders",
+		Durable:       consumerName,
+	}
+
+	cons, err := js.CreateConsumer(ctx, cfgStream.Name, cfgConsu)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	cc, err := cons.Consume(func(msg jetstream.Msg) {
 		fmt.Printf("New message from %s : %s - ", msg.Subject(), string(msg.Data()))
-		fmt.Print("ack")
-		msg.InProgress()
-		//		fmt.Print("  nack\n")
+		msg.Ack()
 		time.Sleep(500 * time.Millisecond)
 		fmt.Printf("\n")
-
 	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer cc.Drain()
 
 	fmt.Println("wait forever")
