@@ -38,12 +38,11 @@ func main() {
 	defer cancel()
 
 	cfgStream := jetstream.StreamConfig{
-		Replicas:    3,
-		Name:        streamName,
-		Subjects:    []string{subjects},
-		Storage:     jetstream.FileStorage,
-		Retention:   jetstream.InterestPolicy,
-		AllowDirect: true,
+		Replicas:  3,
+		Name:      streamName,
+		Subjects:  []string{subjects},
+		Storage:   jetstream.FileStorage,
+		Retention: jetstream.WorkQueuePolicy,
 	}
 
 	_, err = js.CreateOrUpdateStream(ctx, cfgStream)
@@ -63,9 +62,9 @@ func main() {
 	}
 
 	cc, err := cons.Consume(func(msg jetstream.Msg) {
-		fmt.Printf("New message from %s : %s - ", msg.Subject(), string(msg.Data()))
+		fmt.Printf("New message from %s : %s ", msg.Subject(), string(msg.Data()))
 		msg.InProgress()
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		msg.Ack()
 		fmt.Printf("\n")
 	})
