@@ -7,21 +7,26 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/nats-io/nats.go"
 )
 
 const (
-	streamName = "ORDERS-WEB"
-	subject    = "coffee.web.requests"
+	subject = "coffee.web.requests"
 )
 
 type CoffeeOrder struct {
 	Size       string `json:"size"`
 	BeanType   string `json:"bean_type"`
-	Milk       string `json:milk`
+	Milk       string `json:"milk"`
 	Name       string `json:"name"`
 	SugarCount string `json:"sugar_count"`
+}
+
+type controllerResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }
 
 func sendOrderToController(order CoffeeOrder) error {
@@ -33,25 +38,23 @@ func sendOrderToController(order CoffeeOrder) error {
 	nc, _ := nats.Connect(url)
 	defer nc.Drain()
 
-	js, _ := nc.JetStream()
-
-	js.AddStream(&nats.StreamConfig{
-		Name:     streamName,
-		Subjects: []string{subject},
-	})
-
 	jsonData, err := json.Marshal(order)
 	if err != nil {
 		return errors.New("Error converting to JSON:" + err.Error())
 
 	}
-	ack, err := js.Publish(subject, jsonData)
-
+	rep, err := nc.Request(subject, jsonData, 2*time.Second)
 	if err != nil {
+		fmt.Println(err.Error())
 		return err
 	}
 
-	fmt.Println(ack)
+	var response controllerResponse
+	err = json.Unmarshal(rep.Data, &response)
+	if err != nil {
+		return errors.New("can't unmarshall response from controller")
+	}
+
 	return nil
 }
 
@@ -61,6 +64,7 @@ func handleCoffeeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	var order CoffeeOrder
 	err := json.NewDecoder(r.Body).Decode(&order)
 	if err != nil {
@@ -69,25 +73,31 @@ func handleCoffeeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if order.Size == "" || order.BeanType == "" || order.Name == "" || order.SugarCount == "" || order.Milk == "" {
-		http.Error(w, "Missing or invalid parameters", http.StatusBadRequest)
-		return
-	}
-	// orderStatus must be "succeed" or failed
 	var orderStatus string
+	responseTitle := "Thank you!"
 	orderStatus = "success"
 
 	response := fmt.Sprintf("Order received from %s : %s size coffee, %s beans, with %s and  %s sugar(s).",
 		order.Name, order.Size, order.BeanType, order.Milk, order.SugarCount)
 	fmt.Println(response)
-	err = sendOrderToController(order)
 
-	if err != nil {
-		fmt.Println("ERR")
+	if order.Size == "" || order.BeanType == "" || order.Name == "" || order.SugarCount == "" || order.Milk == "" {
+		response = "Something's missing 🤔"
+		orderStatus = "error"
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"title": "Thank you!", "message": response, "status": orderStatus})
+	if orderStatus != "failed" {
+		err = sendOrderToController(order)
+		if err != nil {
+			orderStatus = "error"
+			responseTitle = "Oh..."
+			response = "Sadly, we can't transfer your order to our backend 😢"
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"title": responseTitle, "message": response, "status": orderStatus})
+
+	return
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
