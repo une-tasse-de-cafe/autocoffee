@@ -23,6 +23,10 @@ jobs:
             context: routes
             tag: latest
             name: "routes"
+          - Dockerfile: controller/Dockerfile
+            context: controller
+            tag: latest
+            name: "controller"
 
     steps:
       - name: Set up Docker Buildx
