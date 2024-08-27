@@ -13,7 +13,7 @@ const (
 )
 
 type controllerResponse struct {
-	Status  string `json:"status"`
+	Status  string `json:"status"` // success or error
 	Message string `json:"message"`
 }
 
@@ -35,11 +35,10 @@ func main() {
 			Message: "The coffee has been successfully scheduled",
 		}
 
-		jsonData, err := json.Marshal(response)
-		if err != nil {
-			fmt.Println("Error marshaling to JSON:", err)
-			msg.Respond([]byte("fail"))
-		}
+		// Handle message
+
+		jsonData, _ := json.Marshal(response)
+
 		fmt.Printf("Status: %s, Message: %s\n", response.Status, response.Message)
 
 		msg.Respond(jsonData)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"golang.org/x/exp/rand"
 )
 
 const (
@@ -38,11 +39,12 @@ func main() {
 	defer cancel()
 
 	cfgStream := jetstream.StreamConfig{
-		Replicas:  3,
-		Name:      streamName,
-		Subjects:  []string{subjects},
-		Storage:   jetstream.FileStorage,
-		Retention: jetstream.WorkQueuePolicy,
+		Replicas:    3,
+		Name:        streamName,
+		Subjects:    []string{subjects},
+		Storage:     jetstream.FileStorage,
+		Retention:   jetstream.WorkQueuePolicy,
+		AllowDirect: true,
 	}
 
 	_, err = js.CreateOrUpdateStream(ctx, cfgStream)
@@ -64,8 +66,17 @@ func main() {
 	cc, err := cons.Consume(func(msg jetstream.Msg) {
 		fmt.Printf("New message from %s : %s ", msg.Subject(), string(msg.Data()))
 		msg.InProgress()
-		time.Sleep(10 * time.Millisecond)
-		msg.Ack()
+
+		number := rand.Intn(10)
+		if number == 0 {
+			fmt.Print("--- failed !")
+			msg.Nak()
+		} else {
+			//			fmt.Print("- succeed")
+			time.Sleep(200 * time.Millisecond)
+			msg.Ack()
+		}
+
 		fmt.Printf("\n")
 	})
 
