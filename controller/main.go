@@ -30,17 +30,15 @@ func main() {
 	sub, _ := nc.Subscribe(subject, func(msg *nats.Msg) {
 
 		fmt.Println("Received a new order: " + string(msg.Data))
-		response := controllerResponse{
-			Status:  "success",
-			Message: "The coffee has been successfully scheduled",
-		}
+
+		var response controllerResponse
+		response.Status = "success"
+		response.Message = "The coffee has been successfully scheduled"
 
 		// Handle message
 
 		jsonData, _ := json.Marshal(response)
-
 		fmt.Printf("Status: %s, Message: %s\n", response.Status, response.Message)
-
 		msg.Respond(jsonData)
 	})
 
