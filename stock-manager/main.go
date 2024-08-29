@@ -83,22 +83,17 @@ func main() {
 		log.Printf("Received a message: %s", string(m.Data))
 		log.Printf("Subject : %s", m.Subject)
 		subjectUri := strings.Split(m.Subject, ".")
-		fmt.Println(subjectUri)
 
 		if len(subjectUri) != 4 {
-			fmt.Println("The subject length isn't correct")
+			log.Println("The subject length isn't correct")
 			return
 		}
 
 		// Authorize only requests for knowned type/action
 		typeBean := subjectUri[2]
 		switch typeBean {
-		case "arabica":
-			fmt.Println(typeBean)
-		case "robusta":
-			fmt.Println(typeBean)
-		case "mixed":
-			fmt.Println(typeBean)
+		case "arabica", "robusta", "mixed":
+			log.Println("Bean type: " + typeBean)
 		default:
 			fmt.Println("Not supported")
 			return
@@ -107,18 +102,23 @@ func main() {
 		action := subjectUri[3]
 		switch action {
 		case "get":
-			fmt.Println("get")
 			getRequest := `SELECT value FROM data WHERE type=?`
 			var value string
-			err := db.QueryRow(getRequest, typeBean).Scan(&value)
+			err = db.QueryRow(getRequest, typeBean).Scan(&value)
 			if err != nil {
 				fmt.Println("Cannot requests to the db")
 				return
 			}
-			fmt.Println(value)
+			log.Println("Coffee left: " + value)
+			err = m.Respond([]byte(value))
+			if err != nil {
+				fmt.Println("Can't respond to client : " + err.Error())
+				return
+			}
 
-		case "set":
-			fmt.Println("set")
+		case "dec":
+			fmt.Println("decrement")
+			m.Respond([]byte("hello"))
 		default:
 			fmt.Println("This action is not supported.")
 			return
