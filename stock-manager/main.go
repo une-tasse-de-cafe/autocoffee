@@ -84,7 +84,7 @@ func main() {
 		log.Printf("Subject : %s", m.Subject)
 		subjectUri := strings.Split(m.Subject, ".")
 
-		if len(subjectUri) != 4 {
+		if len(subjectUri) != 4 && len(subjectUri) != 5 {
 			log.Println("The subject length isn't correct")
 			return
 		}
@@ -101,6 +101,8 @@ func main() {
 
 		action := subjectUri[3]
 		switch action {
+		// All message are answered with the number of coffee left
+		// coffee.stock.robusta.get
 		case "get":
 			getRequest := `SELECT value FROM data WHERE type=?`
 			var value string
@@ -116,12 +118,56 @@ func main() {
 				return
 			}
 
+		// coffee.stock.robusta.dec.large
 		case "dec":
-			fmt.Println("decrement")
-			m.Respond([]byte("hello"))
+			fmt.Println(len(subjectUri))
+			if len(subjectUri) != 5 {
+				fmt.Println("Bad request")
+				return
+			}
+			size := subjectUri[4]
+
+			coffeeQuantityMap := make(map[string]string)
+			coffeeQuantityMap["small"] = "9"
+			coffeeQuantityMap["medium"] = "17"
+			coffeeQuantityMap["large"] = "30"
+
+			quantity, ok := coffeeQuantityMap[size]
+			if !ok {
+				fmt.Println("Invalid coffee size")
+				return
+			}
+
+			updateQuery := `UPDATE data SET value = value - ? WHERE type = ?`
+			_, err = db.Exec(updateQuery, quantity, typeBean)
+			if err != nil {
+				fmt.Println("Failed to update coffee quantity")
+				return
+			}
+			log.Printf("Decremented %s coffee by %s", typeBean, quantity)
+
 		default:
 			fmt.Println("This action is not supported.")
 			return
+		}
+
+		// Display the remaining quantity of all coffee types
+		rows, err := db.Query("SELECT type, value FROM data")
+		if err != nil {
+			fmt.Println("Failed to fetch coffee data")
+			return
+		}
+		defer rows.Close()
+
+		fmt.Println("Remaining coffee quantities:")
+		for rows.Next() {
+			var coffeeType, quantity string
+			err := rows.Scan(&coffeeType, &quantity)
+			if err != nil {
+				fmt.Println("Failed to scan coffee data")
+				return
+			}
+			fmt.Printf("%s: %s\n", coffeeType, quantity)
 		}
 
 	})
