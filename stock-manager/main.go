@@ -145,6 +145,7 @@ func main() {
 				return
 			}
 			log.Printf("Decremented %s coffee by %s", typeBean, quantity)
+			m.Respond([]byte("OK"))
 
 		default:
 			fmt.Println("This action is not supported.")

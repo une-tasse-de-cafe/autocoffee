@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,14 @@ const (
 	subjects     = "coffee.orders.*"
 	streamName   = "coffee-orders"
 )
+
+type CoffeeOrder struct {
+	Size       string `json:"size"`
+	BeanType   string `json:"bean_type"`
+	Milk       string `json:"milk"`
+	Name       string `json:"name"`
+	SugarCount string `json:"sugar_count"`
+}
 
 func main() {
 
@@ -65,16 +74,33 @@ func main() {
 
 	cc, err := cons.Consume(func(msg jetstream.Msg) {
 		fmt.Printf("New message from %s : %s ", msg.Subject(), string(msg.Data()))
+
+		var coffee CoffeeOrder
+		err := json.Unmarshal(msg.Data(), &coffee)
+		if err != nil {
+			fmt.Println("Error unmarshalling order: ", err)
+			// If the order is invalid, delete it
+			msg.Term()
+			return
+		}
+
 		msg.InProgress()
 
-		number := rand.Intn(10)
-		if number == 0 {
+		number := rand.Intn(100)
+		// 5% of chance to fail the coffee
+		if number <= 5 {
 			fmt.Print("--- failed !")
 			msg.Nak()
+			return
 		} else {
-			//			fmt.Print("- succeed")
-			time.Sleep(200 * time.Millisecond)
+
+			subjectStock := fmt.Sprintf("coffee.stock.%s.dec.%s", coffee.BeanType, coffee.Size)
 			msg.Ack()
+			_, err := nc.Request(subjectStock, []byte(""), 2*time.Second)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
 		}
 
 		fmt.Printf("\n")
