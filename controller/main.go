@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -48,7 +49,7 @@ func main() {
 
 		var order CoffeeOrder
 
-		fmt.Println("Received a new order: " + string(msg.Data))
+		log.Println("☕ Received a new order: " + string(msg.Data))
 
 		err := json.Unmarshal(msg.Data, &order)
 		if err != nil {
@@ -70,19 +71,16 @@ func main() {
 			return
 		}
 
-		fmt.Println("Received stock quantity: ", stockQuantity)
-
-		fmt.Println(order)
-		fmt.Println("Needed :", coffeeQuantityMap[order.Size])
-
 		// If the quantity of coffee is greater than the amount of coffee needed for the order
 		// then schedule the order
 		// else return an error response
-		fmt.Printf("Order ask for %d (size %s), we have currently %d", coffeeQuantityMap[order.Size], order.Size, stockQuantity)
+		log.Printf("🤔 Order ask for %d (size %s), we have currently %d", coffeeQuantityMap[order.Size], order.Size, stockQuantity)
 		if coffeeQuantityMap[order.Size] <= stockQuantity {
+			log.Println("✅ Order successfully submitted")
 			response.Status = "success"
 			response.Message = "The coffee has been successfully scheduled"
 		} else {
+			log.Println("❌ Not enough stock")
 			response.Status = "error"
 			response.Message = fmt.Sprintf("Insufficient coffee for type %s", order.BeanType)
 		}
@@ -98,13 +96,13 @@ func main() {
 		}
 
 		jsonData, _ := json.Marshal(response)
-		fmt.Printf("Status: %s, Message: %s\n", response.Status, response.Message)
+		log.Printf("🗣️ Status: %s, Message: %s\n", response.Status, response.Message)
 		msg.Respond(jsonData)
 	})
 
 	defer sub.Unsubscribe()
 
-	fmt.Println("Waiting for orders")
+	log.Println("⌛ Waiting for orders...")
 	// wait forever
 	select {}
 

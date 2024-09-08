@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 const (
-	subject = "coffee.web.requests"
+	subject     = "coffee.web.requests"
+	concurrency = 5
 )
 
 type CoffeeOrder struct {
@@ -29,15 +33,14 @@ type controllerResponse struct {
 	Message string `json:"message"`
 }
 
+var (
+	nc *nats.Conn
+)
+
 func sendOrderToController(order CoffeeOrder) (controllerResponse, error) {
 	var response controllerResponse
-	url := os.Getenv("NATS_URL")
-	if url == "" {
-		return response, errors.New("Please provide nats url in NATS_URL env")
-	}
 
-	nc, _ := nats.Connect(url)
-	defer nc.Drain()
+	log.Printf("☕ New order received for %s", order.Name)
 
 	jsonData, err := json.Marshal(order)
 	if err != nil {
@@ -47,7 +50,7 @@ func sendOrderToController(order CoffeeOrder) (controllerResponse, error) {
 
 	rep, err := nc.Request(subject, jsonData, 2*time.Second)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Printf("Error sending order: %v", err)
 		return response, err
 	}
 
@@ -69,7 +72,7 @@ func handleCoffeeOrder(w http.ResponseWriter, r *http.Request) {
 	var order CoffeeOrder
 	err := json.NewDecoder(r.Body).Decode(&order)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Printf("Error unmarshalling order: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -86,33 +89,91 @@ func handleCoffeeOrder(w http.ResponseWriter, r *http.Request) {
 
 	controllerResponse, err = sendOrderToController(order)
 	if err != nil {
-		fmt.Println(err.Error())
+
+		log.Println("💢 Coffee cannot be scheduled !", err)
 		controllerResponse.Status = "error"
 		responseTitle = "Oh..."
 		controllerResponse.Message = "Sadly, we were not able to discuss with our backend system..."
 	}
 
-	fmt.Println(controllerResponse)
+	log.Println("🗣️ Response : ", controllerResponse.Message)
 
 	json.NewEncoder(w).Encode(map[string]string{"title": responseTitle, "message": controllerResponse.Message, "status": controllerResponse.Status})
 
-	return
 }
 
-func handleHome(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./src/index.html")
+func handleHome(w http.ResponseWriter, numberOfPendingOrders int) {
+
+	tmpl, err := template.ParseFiles("./src/index.html")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	var waitingTime string
+	if numberOfPendingOrders != -1 {
+		// Each coffee take about 1 minute
+
+		waitingTime = strconv.Itoa(numberOfPendingOrders/concurrency) + "min"
+	} else {
+		waitingTime = "Unknown"
+	}
+
+	data := struct {
+		WaitingTime string
+	}{
+		WaitingTime: waitingTime,
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func main() {
+
+	url := os.Getenv("NATS_URL")
+	nc, _ = nats.Connect(url)
+	defer nc.Drain()
+
+	js, err := jetstream.New(nc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	kv, err := js.CreateKeyValue(context.TODO(), jetstream.KeyValueConfig{
+		Bucket: "orders-values",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	http.HandleFunc("/order-coffee", handleCoffeeOrder)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/index", http.StatusMovedPermanently)
 	})
 
-	http.HandleFunc("/index", handleHome)
+	http.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
+		var numberOfPendingOrders int
 
-	fmt.Println("Starting server on port 8080...")
+		kvValuePendingOrders, err := kv.Get(context.Background(), "orders.pending")
+		if err != nil {
+			numberOfPendingOrders = -1
+		} else {
+			numberOfPendingOrders, err = strconv.Atoi(string(kvValuePendingOrders.Value()))
+			if err != nil {
+
+				numberOfPendingOrders = -1
+			}
+		}
+
+		handleHome(w, numberOfPendingOrders)
+	})
+
+	log.Println("Starting server on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Could not start server: %s\n", err)
 	}

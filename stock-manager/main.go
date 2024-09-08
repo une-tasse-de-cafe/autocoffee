@@ -60,9 +60,9 @@ func main() {
 			if err != nil {
 				log.Fatal("Failed to insert row:", err)
 			}
-			fmt.Printf("Inserted missing row: type=%s, value=%s\n", row.Type, row.Value)
+			log.Printf("📫 Inserted missing row: type=%s, value=%s\n", row.Type, row.Value)
 		} else {
-			fmt.Printf("Row already exists: type=%s\n", row.Type)
+			log.Printf("📫 Row already exists: type=%s\n", row.Type)
 		}
 	}
 
@@ -80,8 +80,7 @@ func main() {
 	defer nc.Close()
 
 	sub, err := nc.Subscribe("coffee.stock.>", func(m *nats.Msg) {
-		log.Printf("Received a message: %s", string(m.Data))
-		log.Printf("Subject : %s", m.Subject)
+		log.Printf("📥 Received a message: %s \n", string(m.Data))
 		subjectUri := strings.Split(m.Subject, ".")
 
 		if len(subjectUri) != 4 && len(subjectUri) != 5 {
@@ -93,9 +92,9 @@ func main() {
 		typeBean := subjectUri[2]
 		switch typeBean {
 		case "arabica", "robusta", "mixed":
-			log.Println("Bean type: " + typeBean)
+			break
 		default:
-			fmt.Println("Not supported")
+			log.Println("Not supported")
 			return
 		}
 
@@ -108,21 +107,20 @@ func main() {
 			var value string
 			err = db.QueryRow(getRequest, typeBean).Scan(&value)
 			if err != nil {
-				fmt.Println("Cannot requests to the db")
+				log.Println("💢 Cannot requests to the db")
 				return
 			}
 			log.Println("Coffee left: " + value)
 			err = m.Respond([]byte(value))
 			if err != nil {
-				fmt.Println("Can't respond to client : " + err.Error())
+				log.Println("💢 Can't respond to client : " + err.Error())
 				return
 			}
 
 		// coffee.stock.robusta.dec.large
 		case "dec":
-			fmt.Println(len(subjectUri))
 			if len(subjectUri) != 5 {
-				fmt.Println("Bad request")
+				log.Println("💢 Bad request")
 				return
 			}
 			size := subjectUri[4]
@@ -141,44 +139,44 @@ func main() {
 			updateQuery := `UPDATE data SET value = value - ? WHERE type = ?`
 			_, err = db.Exec(updateQuery, quantity, typeBean)
 			if err != nil {
-				fmt.Println("Failed to update coffee quantity")
+				fmt.Println("💢 Failed to update coffee quantity")
 				return
 			}
 			log.Printf("Decremented %s coffee by %s", typeBean, quantity)
 			m.Respond([]byte("OK"))
 
 		default:
-			fmt.Println("This action is not supported.")
+			fmt.Println("💢 This action is not supported.")
 			return
 		}
 
 		// Display the remaining quantity of all coffee types
 		rows, err := db.Query("SELECT type, value FROM data")
 		if err != nil {
-			fmt.Println("Failed to fetch coffee data")
+			fmt.Println("💢 Failed to fetch coffee data")
 			return
 		}
 		defer rows.Close()
 
-		fmt.Println("Remaining coffee quantities:")
+		log.Println("📦 Remaining coffee quantities:")
 		for rows.Next() {
 			var coffeeType, quantity string
 			err := rows.Scan(&coffeeType, &quantity)
 			if err != nil {
-				fmt.Println("Failed to scan coffee data")
+				fmt.Println("💢 Failed to scan coffee data")
 				return
 			}
-			fmt.Printf("%s: %s\n", coffeeType, quantity)
+			fmt.Printf("☕ %s: %s\n", coffeeType, quantity)
 		}
 
 	})
 
 	if err != nil {
-		log.Fatal("Failed to subscribe to subject:", err)
+		log.Fatal("💢 Failed to subscribe to subject:", err)
 	}
 
 	// Keep the service running
-	log.Println("Service is running... waiting for messages.")
+	log.Println("⌛ Waiting for orders...")
 
 	defer sub.Unsubscribe()
 	select {} // Block forever
