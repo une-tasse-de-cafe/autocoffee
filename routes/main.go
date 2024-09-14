@@ -135,7 +135,11 @@ func handleHome(w http.ResponseWriter, numberOfPendingOrders int) {
 func main() {
 
 	url := os.Getenv("NATS_URL")
-	nc, _ = nats.Connect(url)
+	nc, err := nats.Connect(url)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	defer nc.Drain()
 
 	js, err := jetstream.New(nc)

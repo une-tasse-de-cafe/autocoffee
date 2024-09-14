@@ -37,13 +37,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	nc, _ := nats.Connect(os.Getenv("NATS_URL"))
+	nc, err := nats.Connect(os.Getenv("NATS_URL"), nats.Options{}
+	if err != nil {
+		log.Fatal("connect to nats: ", err)
+	}
 
 	defer nc.Close()
 
 	js, err := jetstream.New(nc)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("create js client: ", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -60,7 +63,7 @@ func main() {
 
 	_, err = js.CreateOrUpdateStream(ctx, cfgStream)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("create stream : ", err)
 	}
 
 	cfgConsu := jetstream.ConsumerConfig{
