@@ -37,7 +37,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	nc, err := nats.Connect(os.Getenv("NATS_URL"), nats.Options{}
+	opt, err := nats.NkeyOptionFromSeed("seed.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	nc, err := nats.Connect(os.Getenv("NATS_URL"), opt)
 	if err != nil {
 		log.Fatal("connect to nats: ", err)
 	}
