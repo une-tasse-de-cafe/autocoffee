@@ -134,10 +134,14 @@ func handleHome(w http.ResponseWriter, numberOfPendingOrders int) {
 
 func main() {
 
-	url := os.Getenv("NATS_URL")
-	nc, err := nats.Connect(url)
+	opt, err := nats.NkeyOptionFromSeed("seed.txt")
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	nc, err = nats.Connect(os.Getenv("NATS_URL"), opt)
+	if err != nil {
+		log.Fatal("connect to nats: ", err)
 	}
 
 	defer nc.Drain()
@@ -169,7 +173,6 @@ func main() {
 		} else {
 			numberOfPendingOrders, err = strconv.Atoi(string(kvValuePendingOrders.Value()))
 			if err != nil {
-
 				numberOfPendingOrders = -1
 			}
 		}

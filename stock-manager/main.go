@@ -72,9 +72,14 @@ func main() {
 		url = "192.168.128.51:4222"
 	}
 
-	nc, err := nats.Connect(url)
+	opt, err := nats.NkeyOptionFromSeed("seed.txt")
 	if err != nil {
-		log.Fatal("Failed to connect to NATS:", err)
+		log.Fatal(err)
+	}
+
+	nc, err := nats.Connect(os.Getenv("NATS_URL"), opt)
+	if err != nil {
+		log.Fatal("connect to nats: ", err)
 	}
 
 	defer nc.Close()

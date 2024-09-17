@@ -42,10 +42,19 @@ func main() {
 	coffeeQuantityMap["medium"] = 17
 	coffeeQuantityMap["large"] = 30
 
-	nc, _ := nats.Connect(url)
+	opt, err := nats.NkeyOptionFromSeed("seed.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	nc, err := nats.Connect(os.Getenv("NATS_URL"), opt)
+	if err != nil {
+		log.Fatal("connect to nats: ", err)
+	}
+
 	defer nc.Drain()
 
-	sub, _ := nc.Subscribe(subjectSub, func(msg *nats.Msg) {
+	sub, err := nc.Subscribe(subjectSub, func(msg *nats.Msg) {
 
 		var order CoffeeOrder
 
@@ -99,6 +108,9 @@ func main() {
 		log.Printf("🗣️ Status: %s, Message: %s\n", response.Status, response.Message)
 		msg.Respond(jsonData)
 	})
+	if err != nil {
+		log.Fatal("connect to nats: ", err)
+	}
 
 	defer sub.Unsubscribe()
 
