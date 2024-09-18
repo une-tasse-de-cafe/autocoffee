@@ -1,4 +1,4 @@
-module github.com/qjoly/coffee-shop/coffee-maker
+module github.com/qjoly/autocoffee/coffee-maker
 
 go 1.22.5
 

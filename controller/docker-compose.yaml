@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   routes:
-    image: ghcr.io/une-tasse-de-cafe/coffee-shop/controller:latest
+    image: ghcr.io/une-tasse-de-cafe/autocoffee/controller:latest
     build: .
     environment:
       - "NATS_URL=192.168.128.51:4222"

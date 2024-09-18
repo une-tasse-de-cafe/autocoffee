@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   routes:
-    image: ghcr.io/une-tasse-de-cafe/coffee-shop/routes:latest
+    image: ghcr.io/une-tasse-de-cafe/autocoffee/routes:latest
     build: .
     ports:
       - 8080:8080

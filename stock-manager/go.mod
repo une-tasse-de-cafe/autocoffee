@@ -1,4 +1,4 @@
-module github.com/une-tasse-de-cafe/coffee-shop/stock-manager
+module github.com/une-tasse-de-cafe/autocoffee/stock-manager
 
 go 1.21.6
 

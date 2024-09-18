@@ -66,12 +66,6 @@ func main() {
 		}
 	}
 
-	// Connect to NATS server
-	url := os.Getenv("NATS_URL")
-	if url == "" {
-		url = "192.168.128.51:4222"
-	}
-
 	opt, err := nats.NkeyOptionFromSeed("seed.txt")
 	if err != nil {
 		log.Fatal(err)

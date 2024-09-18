@@ -1,4 +1,4 @@
-module github.com/une-tasse-de-cafe/coffee-shop/controller
+module github.com/une-tasse-de-cafe/autocoffee/controller
 
 go 1.22.6
 

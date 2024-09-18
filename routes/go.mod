@@ -1,4 +1,4 @@
-module github.com/une-tasse-de-cafe/coffee-shop/routes
+module github.com/une-tasse-de-cafe/autocoffee/routes
 
 go 1.21.6
 
