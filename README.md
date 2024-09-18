@@ -12,4 +12,19 @@ The demo consists of the following components:
 
 # Running the demo
 
-You will need to have a NATS server running. 
+You will need to have a NATS server running. Set an environment variable `NATS_SERVER` and run each service with `go run`.
+
+```bash
+export NATS_SERVER=localhost:4222
+```
+
+```bash
+cd routes && go run main.go &
+cd controller && go run main.go &
+cd stock && go run main.go &
+cd coffee-makers && go run main.go &
+```
+
+# Demo 
+
+![Demo](./.github/demo.jpg)
