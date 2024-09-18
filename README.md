@@ -28,3 +28,4 @@ cd coffee-makers && go run main.go &
 # Demo 
 
 ![Demo](./.github/demo.jpg)
+![Webpage](./.github/webpage.png)
